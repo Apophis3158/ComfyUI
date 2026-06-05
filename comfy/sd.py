@@ -476,7 +476,8 @@ class VAE:
             VAE_KL_MEM_RATIO = 1.0
 
         self.memory_used_encode = lambda shape, dtype: (1767 * shape[2] * shape[3]) * model_management.dtype_size(dtype) * VAE_KL_MEM_RATIO #These are for AutoencoderKL and need tweaking (should be lower)
-        self.memory_used_decode = lambda shape, dtype: (2178 * shape[2] * shape[3] * 64) * model_management.dtype_size(dtype) * VAE_KL_MEM_RATIO
+        # self.memory_used_decode = lambda shape, dtype: (2178 * shape[2] * shape[3] * 64) * model_management.dtype_size(dtype) * VAE_KL_MEM_RATIO
+        self.memory_used_decode = lambda shape, dtype: logging.info(f"* VAE_KL_MEM_RATIO {VAE_KL_MEM_RATIO}x, mem={(2178 * shape[2] * shape[3] * 64) * model_management.dtype_size(dtype) * VAE_KL_MEM_RATIO / 1024**3:.2f}GB") or (2178 * shape[2] * shape[3] * 64) * model_management.dtype_size(dtype) * VAE_KL_MEM_RATIO
         self.downscale_ratio = 8
         self.upscale_ratio = 8
         self.latent_channels = 4
@@ -589,6 +590,7 @@ class VAE:
                         self.latent_channels *= 4
                         old_memory_used_decode = self.memory_used_decode
                         self.memory_used_decode = lambda shape, dtype: old_memory_used_decode(shape, dtype) *  4.0
+                        logging.info("* memory used decode rewrite to 4x")
 
                     decoder_ch = sd['decoder.conv_in.weight'].shape[0] // ddconfig['ch_mult'][-1]
                     if decoder_ch != ddconfig['ch']:
@@ -1052,6 +1054,7 @@ class VAE:
         with model_management.cuda_device_context(self.device):
             try:
                 memory_used = self.memory_used_decode(samples_in.shape, self.vae_dtype)
+                logging.info(f"* memory used: {memory_used / 1024**3:.2f}GB")
                 model_management.load_models_gpu([self.patcher], memory_required=memory_used, force_full_load=self.disable_offload)
                 free_memory = self.patcher.get_free_memory(self.device)
                 batch_number = int(free_memory / memory_used)
@@ -1101,6 +1104,7 @@ class VAE:
     def decode_tiled(self, samples, tile_x=None, tile_y=None, overlap=None, tile_t=None, overlap_t=None):
         self.throw_exception_if_invalid()
         memory_used = self.memory_used_decode(samples.shape, self.vae_dtype) #TODO: calculate mem required for tile
+        logging.info(f"* (tiled)memory used: {memory_used / 1024**3:.2f}GB")
         model_management.load_models_gpu([self.patcher], memory_required=memory_used, force_full_load=self.disable_offload)
         dims = samples.ndim - 2
         args = {}
