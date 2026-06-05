@@ -1379,7 +1379,7 @@ def reset_cast_buffers():
             model.model.dynamic_pins[model.load_device]["patches"] = (comfy_aimdo.host_buffer.HostBuffer(0, 8 * 1024 * 1024, pinned_hostbuf_size(model.model_size())), [], [-1], [0], [0], {})
 
     STREAM_CAST_BUFFERS.clear()
-    STREAM_AIMDO_CAST_BUFFERS.clear()
+    # STREAM_AIMDO_CAST_BUFFERS.clear()
     soft_empty_cache()
 
 def get_offload_stream(device):
