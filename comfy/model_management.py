@@ -475,9 +475,11 @@ SUPPORT_FP8_OPS = args.supports_fp8_compute
 
 AMD_RDNA2_AND_OLDER_ARCH = ["gfx1030", "gfx1031", "gfx1010", "gfx1011", "gfx1012", "gfx906", "gfx900", "gfx803"]
 AMD_ENABLE_MIOPEN_ENV = 'COMFYUI_ENABLE_MIOPEN'
+AMD_LEGACY_VAE = False
 
 try:
     if is_amd():
+        AMD_LEGACY_VAE = True
         arch = torch.cuda.get_device_properties(get_torch_device()).gcnArchName.split(':')[0]
         if not (any((a in arch) for a in AMD_RDNA2_AND_OLDER_ARCH)):
             if os.getenv(AMD_ENABLE_MIOPEN_ENV) != '1':
@@ -506,7 +508,7 @@ try:
         if args.use_split_cross_attention == False and args.use_quad_cross_attention == False:
             if aotriton_supported(arch):  # AMD efficient attention implementation depends on aotriton.
                 if torch_version_numeric >= (2, 7):  # works on 2.6 but doesn't actually seem to improve much
-                    if any((a in arch) for a in ["gfx90a", "gfx942", "gfx950", "gfx1100", "gfx1101", "gfx1150", "gfx1151"]):  # TODO: more arches, TODO: gfx950
+                    if any((a in arch) for a in ["gfx90a", "gfx942", "gfx950", "gfx1100", "gfx1101", "gfx1150", "gfx1151"]):  # TODO: more arches
                         ENABLE_PYTORCH_ATTENTION = True
                 if rocm_version >= (7, 0):
                    if any((a in arch) for a in ["gfx1200", "gfx1201"]):
@@ -514,7 +516,9 @@ try:
         if torch_version_numeric >= (2, 7) and rocm_version >= (6, 4):
             if any((a in arch) for a in ["gfx1200", "gfx1201", "gfx950"]):  # TODO: more arches, "gfx942" gives error on pytorch nightly 2.10 1013 rocm7.0
                 SUPPORT_FP8_OPS = True
-
+        if torch_version_numeric >= (2, 9) and rocm_version >= (7, 2):
+            if any((a in arch) for a in ["gfx1201", "gfx1200"]):  # TODO: more arches, gfx1151
+                AMD_LEGACY_VAE = False
 except:
     pass
 
@@ -1616,7 +1620,7 @@ def pytorch_attention_enabled():
     return ENABLE_PYTORCH_ATTENTION
 
 def pytorch_attention_enabled_vae():
-    if is_amd():
+    if AMD_LEGACY_VAE:
         return False  # enabling pytorch attention on AMD currently causes crash when doing high res
     return pytorch_attention_enabled()
 

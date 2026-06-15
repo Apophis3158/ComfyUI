@@ -470,7 +470,7 @@ class VAE:
         if 'decoder.up_blocks.0.resnets.0.norm1.weight' in sd.keys(): #diffusers format
             sd = diffusers_convert.convert_vae_state_dict(sd)
 
-        if model_management.is_amd():
+        if model_management.AMD_LEGACY_VAE:
             VAE_KL_MEM_RATIO = 2.73
         else:
             VAE_KL_MEM_RATIO = 1.0
